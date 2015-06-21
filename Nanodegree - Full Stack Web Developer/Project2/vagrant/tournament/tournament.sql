@@ -1,4 +1,5 @@
 -- Create the database
+DROP DATABASE IF EXISTS tournament;
 CREATE DATABASE tournament;
 \c tournament;
 
@@ -16,7 +17,8 @@ CREATE TABLE IF NOT EXISTS Players(
 CREATE TABLE IF NOT EXISTS Matches(
   P1 INTEGER NOT NULL REFERENCES Players(ID),
   P2 INTEGER NOT NULL REFERENCES Players(ID),
-  WINNER INTEGER NOT NULL REFERENCES Players(ID)
+  WINNER INTEGER NOT NULL REFERENCES Players(ID),
+  PRIMARY KEY(P1,P2)
 );
 
 -- View for win count for each player
