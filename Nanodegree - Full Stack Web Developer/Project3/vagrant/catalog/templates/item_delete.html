@@ -1,0 +1,8 @@
+{% extends "layout.html" %}
+{% block content %}
+  <form action="{{url_for('itemDelete', category_id=item.category_id, item_id=item.id)}}" method="post">
+    <p>Are you sure you want to delete the following item:</p>
+    <p><b>{{item.name}}</b></p>
+    <p><button type="submit" class="btn btn-danger">Delete</button></p>
+  </form>
+{% endblock %}

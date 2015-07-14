@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block content %}
+  <form action="{{url_for('itemEdit', category_id=item.category_id, item_id=item.id)}}" method="post">
+    <div class="form-group">
+      <label for="item_name">Name</label>
+      <input type="text" class="form-control" id="item_name" name="item_name" value="{{item.name}}">
+    </div>
+    
+    <div class="form-group">
+      <label for="item_description">Description</label>
+      <input type="text" class="form-control" id="item_description" name="item_description" value="{{item.description}}">
+    </div>
+    
+    <div class="form-group">
+      <label for="item_category">Category</label>
+      <select class="form-control" id="item_category" name="item_category">
+      {% for category in categories %}
+        <option value="{{category.id}}" {% if category.id == item.category_id %} selected="selected" {% endif %}>{{category.name}}</option>
+      {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-success">Submit</button>
+  </form>
+{% endblock %}

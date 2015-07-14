@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="row">
+    <ol class="breadcrumb">
+      <li class="active">Home</li>
+    </ol>
+  </div>
+  <div class="row">
+    <div class="col-sm-8 col-md-9">
+      <h1>Catalog</h1>
+      <div class="row">
+      {% for category in categories %}
+        <div class="col-sm-3 col-md-2">
+          <a href="{{url_for('items', category_id=category.id)}}">
+            <img class="img-thumbnail" src="http://getbootstrap.com/assets/img/devices.png">
+            <h2 class="text-center">{{category.name}}</h2>
+          </a>
+        </div>
+      {% endfor %}
+      </div>
+    </div>
+    <div class="col-sm-4 col-md-3">
+      <h1>Latest Items</h1>
+      <div class="row">
+        <ul>
+          <li>test1</li>
+          <li>test2</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+{% endblock %}

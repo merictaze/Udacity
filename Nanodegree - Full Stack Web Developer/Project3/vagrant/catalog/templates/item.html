@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="row">
+    <ol class="breadcrumb">
+      <li><a href="/">Home</a></li>
+      <li><a href="{{url_for('items', category_id=category.id)}}">{{category.name}}</a></li>
+      <li class="active">{{item.name}}</li>
+    </ol>
+  </div>
+  <div class="row">
+    <p>{{item.name}}</p>
+    <p>{{item.description}}</p>
+    <p>
+      <a href="{{url_for('itemEdit', category_id=category.id, item_id=item.id)}}" class="btn btn-warning" role="button">Edit</a>
+      <a href="{{url_for('itemDelete', category_id=category.id, item_id=item.id)}}" class="btn btn-danger" role="button">Delete</a>
+    </p>
+  </div>
+{% endblock %}
