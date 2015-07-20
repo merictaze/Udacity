@@ -10,9 +10,11 @@
   <div class="row">
     <p>{{item.name}}</p>
     <p>{{item.description}}</p>
+    {% if updateAllowed %}
     <p>
       <a href="{{url_for('itemEdit', category_id=category.id, item_id=item.id)}}" class="btn btn-warning" role="button">Edit</a>
       <a href="{{url_for('itemDelete', category_id=category.id, item_id=item.id)}}" class="btn btn-danger" role="button">Delete</a>
     </p>
+    {% endif %}
   </div>
 {% endblock %}

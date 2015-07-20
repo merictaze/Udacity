@@ -27,9 +27,9 @@
         <div class="collapse navbar-collapse" id="navbar-collapse-menu">
           <ul class="nav navbar-nav navbar-right">
           {% if not session.username %}
-            <li><a href="">Login</a></li>
+            <li><a href="{{url_for('login')}}">Login</a></li>
           {% else %}
-            <li><a href="">Add Item</a></li>
+            <li><a href="{{url_for('itemAdd')}}">Add Item</a></li>
             <li><a href="{{url_for('gdisconnect')}}">Logout</a></li>
           {% endif %}
           </ul>

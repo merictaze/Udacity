@@ -23,8 +23,9 @@
       <h1>Latest Items</h1>
       <div class="row">
         <ul>
-          <li>test1</li>
-          <li>test2</li>
+        {% for item in latestItems %}
+          <li><a href="{{url_for('item', category_id=item.category_id, item_id=item.id)}}">{{item.name}}</a></li>
+        {% endfor %}
         </ul>
       </div>
     </div>
