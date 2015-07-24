@@ -10,12 +10,15 @@
       <h1>Catalog</h1>
       <div class="row">
       {% for category in categories %}
-        <div class="col-sm-3 col-md-2">
+        <div class="col-xs-4">
           <a href="{{url_for('items', category_id=category.id)}}">
-            <img class="img-thumbnail" src="http://getbootstrap.com/assets/img/devices.png">
-            <h2 class="text-center">{{category.name}}</h2>
+            <img style="margin-right: auto;margin-left: auto; display: block" src="http://placehold.it/200x200" class="img-thumbnail img-responsive">
+            <h3 class="text-center">{{category.name}}</h3>
           </a>
         </div>
+        {% if loop.index % 3 == 0 %}
+        <div class="clearfix col-xs-12"></div>
+        {% endif %}
       {% endfor %}
       </div>
     </div>
@@ -24,7 +27,7 @@
       <div class="row">
         <ul>
         {% for item in latestItems %}
-          <li><a href="{{url_for('item', category_id=item.category_id, item_id=item.id)}}">{{item.name}}</a></li>
+          <li><small><a href="{{url_for('item', category_id=item.category_id, item_id=item.id)}}">{{item.name}}</a></small></li>
         {% endfor %}
         </ul>
       </div>

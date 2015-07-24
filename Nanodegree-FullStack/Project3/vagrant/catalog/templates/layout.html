@@ -26,18 +26,18 @@
         <!-- Collect the nav links, forms, and other content for toggling -->
         <div class="collapse navbar-collapse" id="navbar-collapse-menu">
           <ul class="nav navbar-nav navbar-right">
-          {% if not session.username %}
+          {% if not session.user_id %}
             <li><a href="{{url_for('login')}}">Login</a></li>
           {% else %}
             <li><a href="{{url_for('itemAdd')}}">Add Item</a></li>
-            <li><a href="{{url_for('gdisconnect')}}">Logout</a></li>
+            <li><a href="{{url_for('disconnect')}}">Logout</a></li>
           {% endif %}
           </ul>
         </div><!-- /.navbar-collapse -->
       </div><!-- /.container-fluid -->
     </nav>
     
-    <div class="container">
+    <div class="container" data-module="alert-box">
       
       {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -57,5 +57,6 @@
     
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="{{ url_for('static', filename='libs/bootstrap/js/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='resources/js/app.js') }}"></script>
   </body>
 </html> 

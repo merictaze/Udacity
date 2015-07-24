@@ -14,6 +14,7 @@ TABLE = {
   'user': 'user'
 }
 
+
 class User(Base):
     __tablename__ = TABLE['user']
 
@@ -29,11 +30,12 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
 
-    @property
-    def serialize(self):
+    def serialize(self, session):
         return {
             'name': self.name,
             'id': self.id,
+            'items': [item.serialize for item in session.query(
+                        CatalogItem).filter_by(category_id=self.id)]
         }
 
 
@@ -58,7 +60,8 @@ class CatalogItem(Base):
         }
 
     def __repr__(self):
-        return "<CatalogItem(name=%s, user_id=%s, category_id=%s)" % (self.name, self.user_id, self.category_id)
+        return ("<CatalogItem(name=%s, user_id=%s, category_id=%s)"
+                % (self.name, self.user_id, self.category_id))
 
 engine = create_engine('sqlite:///catalog.db')
 
