@@ -10,9 +10,9 @@
       <h1>Catalog</h1>
       <div class="row">
       {% for category in categories %}
-        <div class="col-xs-4">
+        <div class="col-xs-4 text-center">
           <a href="{{url_for('items', category_id=category.id)}}">
-            <img style="margin-right: auto;margin-left: auto; display: block" src="http://placehold.it/200x200" class="img-thumbnail img-responsive">
+            <img src="{{ url_for('static', filename = 'resources/img/placeholder.png') }}" class="img-thumbnail img-responsive">
             <h3 class="text-center">{{category.name}}</h3>
           </a>
         </div>

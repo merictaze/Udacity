@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
-  <form action="{{url_for('itemEdit', category_id=item.category_id, item_id=item.id)}}" method="post">
+  <form action="{{url_for('itemEdit', category_id=item.category_id, item_id=item.id)}}" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label for="item_name">Name</label>
       <input type="text" class="form-control" id="item_name" name="item_name" value="{{item.name}}">
@@ -10,7 +11,14 @@
       <label for="item_description">Description</label>
       <input type="text" class="form-control" id="item_description" name="item_description" value="{{item.description}}">
     </div>
-    
+
+    <div class="form-group">
+      <label for="item_description">Image</label>
+      <input type="file" class="form-control" id="item_image" name="item_image">
+      <span>OR</span>
+      <input type="text" class="form-control" id="item_img_url" name="item_img_url" placeHolder="Type a URL for item image">
+    </div>
+
     <div class="form-group">
       <label for="item_category">Category</label>
       <select class="form-control" id="item_category" name="item_category">

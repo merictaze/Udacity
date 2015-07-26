@@ -8,6 +8,7 @@
     </ol>
   </div>
   <div class="row">
+    <p><img src="{{url_for('getImage', item_id=item.id)}}" /></p>
     <p><b>{{item.name}}</b></p>
     <p>{{item.description}}</p>
     {% if updateAllowed %}

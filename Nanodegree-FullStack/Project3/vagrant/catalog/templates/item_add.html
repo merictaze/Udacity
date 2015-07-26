@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
-  <form action="{{url_for('itemAdd')}}" method="post">
+  <form action="{{url_for('itemAdd')}}" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
       <label for="item_name">Name</label>
       <input type="text" class="form-control" id="item_name" name="item_name" placeHolder="Type name of the item">
@@ -11,6 +12,13 @@
       <input type="text" class="form-control" id="item_description" name="item_description" placeHolder="Type a description for the item">
     </div>
     
+    <div class="form-group">
+      <label for="item_description">Image</label>
+      <input type="file" class="form-control" id="item_image" name="item_image">
+      <span>OR</span>
+      <input type="text" class="form-control" id="item_img_url" name="item_img_url" placeHolder="Type a URL for item image">
+    </div>
+
     <div class="form-group">
       <label for="item_category">Category</label>
       <select class="form-control" id="item_category" name="item_category">

@@ -1,40 +1,39 @@
 from flask import Flask, render_template, url_for
 from flask import request, redirect, flash, jsonify
 from flask import session as login_session
-from flask import make_response
+from flask import make_response, Response
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from database_setup import Base, User, Category, CatalogItem
-
+from flask.ext.seasurf import SeaSurf
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 from oauth2client.client import AccessTokenCredentials
 
+from dict2xml import dict2xml as xmlify
 import requests
 import random
 import string
-import httplib2
 import json
+import os
 
+from CatalogDAO import CatalogDAO
+from CatalogHelper import *
 
 app = Flask(__name__)
 app.secret_key = 'cvAETf4adFASD4VDS4FB2fas43S5G4gth4T1'
 
-engine = create_engine('sqlite:///catalog.db')
-Base.metadata.bind = engine
-DBSession = sessionmaker(bind=engine)
-session = DBSession()
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024
+
+dao = CatalogDAO()
+csrf = SeaSurf(app)
 
 
 @app.route('/')
 @app.route('/catalog/')
 def catalog():
     """Shows the list of categories in the system"""
-    categories = session.query(Category).all()
-    latestItems = session.query(CatalogItem).join(
-                    CatalogItem.category).order_by(
-                      CatalogItem.time_create.desc()).limit(10)
+    categories = dao.getCategories()
+    latestItems = dao.getLatestItems()
     return render_template('catalog.html', categories=categories,
                            latestItems=latestItems)
 
@@ -46,8 +45,8 @@ def items(category_id):
     Args:
         category_id: id of the category whose items will be shown in the page
     """
-    category = session.query(Category).filter_by(id=category_id).one()
-    items = session.query(CatalogItem).filter_by(category_id=category.id)
+    category = dao.getCategory(category_id)
+    items = dao.getItemsByCategory(category_id)
     return render_template('items.html', category=category, items=items)
 
 
@@ -59,15 +58,15 @@ def item(category_id, item_id):
         category_id: id of the category of the item
         item_id: id of the item
     """
-    category = session.query(Category).filter_by(id=category_id).one()
-    item = session.query(CatalogItem).filter_by(category_id=category.id,
-                                                id=item_id).one()
+    category = dao.getCategory(category_id)
+    item = dao.getItem(item_id)
     return render_template('item.html', category=category, item=item,
-                           updateAllowed=userAllowed(item.user_id))
+                           updateAllowed=createdByUser(item))
 
 
 @app.route('/catalog/<int:category_id>/item/<int:item_id>/edit',
            methods=['GET', 'POST'])
+@login_required
 def itemEdit(category_id, item_id):
     """Lets user edit an item
 
@@ -78,30 +77,35 @@ def itemEdit(category_id, item_id):
         category_id: id of the category of the item
         item_id: id of the item
     """
-    item = session.query(CatalogItem).filter_by(id=item_id).one()
-    if not userAllowed(item.user_id):
+    item = dao.getItem(item_id)
+    if not createdByUser(item):
         return redirect('/')
 
+    data = {}
     if request.method == 'POST':
         if request.form['item_name']:
-            item.name = request.form['item_name']
+            data['name'] = request.form['item_name']
         if request.form['item_description']:
-            item.description = request.form['item_description']
+            data['description'] = request.form['item_description']
         if request.form['item_category']:
-            item.category_id = request.form.getlist('item_category')[0]
-        session.add(item)
-        session.commit()
+            data['category_id'] = request.form.getlist('item_category')[0]
+        if request.form['item_img_url']:
+            data['image'] = sendGETRequest(request.form['item_img_url'])[1]
+        if request.files['item_image']:
+            data['image'] = request.files['item_image'].read()
+        dao.updateItem(item, data)
         flash('Item is updated successfully')
         return redirect(url_for('item', category_id=item.category_id,
                                 item_id=item.id))
     else:
-        categories = session.query(Category).all()
+        categories = dao.getCategories()
         return render_template('item_edit.html', categories=categories,
                                item=item)
 
 
 @app.route('/catalog/<int:category_id>/item/<int:item_id>/delete',
            methods=['GET', 'POST'])
+@login_required
 def itemDelete(category_id, item_id):
     """Lets user delete an item
 
@@ -112,13 +116,12 @@ def itemDelete(category_id, item_id):
         category_id: id of the category of the item
         item_id: id of the item
     """
-    item = session.query(CatalogItem).filter_by(id=item_id).one()
-    if not userAllowed(item.user_id):
+    item = dao.getItem(item_id)
+    if not createdByUser(item):
         return redirect('/')
 
     if request.method == 'POST':
-        session.delete(item)
-        session.commit()
+        dao.deleteItem(item_id)
         flash('Item "%s" is deleted successfully' % item.name)
         return redirect(url_for('items', category_id=category_id,
                                 item_id=item_id))
@@ -127,37 +130,60 @@ def itemDelete(category_id, item_id):
 
 
 @app.route('/catalog/add', methods=['GET', 'POST'])
+@login_required
 def itemAdd():
-    """Lets user add an item
-
-    Only loggedin user can add an item
-    """
-    if not userAllowed():
-        return redirect('/')
+    """Lets user add an item"""
     if request.method == 'POST':
         if (not request.form['item_name'] or
            not request.form['item_description'] or
-           not request.form['item_category']):
+           not request.form['item_category'] or
+           not (request.files['item_image'] or request.form['item_img_url'])):
             flash('Please fill all the fields in the form')
         else:
-            category = session.query(Category).filter_by(
-                        id=request.form['item_category']).one()
-            newItem = CatalogItem(name=request.form['item_name'],
-                                  description=request.form['item_description'],
-                                  category=category)
-            session.add(newItem)
-            session.commit()
+            # get the image data either from the url or uploadted file
+            if request.form['item_img_url']:
+                imgData = sendGETRequest(request.form['item_img_url'])[1]
+            else:
+                imgData = request.files['item_image'].read()
+
+            category = dao.getCategory(request.form['item_category'])
+            dao.createItem(name=request.form['item_name'],
+                           description=request.form['item_description'],
+                           image=imgData,
+                           user_id=login_session['user_id'],
+                           category=category)
+
             flash('New item is added successfully')
 
-    categories = session.query(Category).all()
+    categories = dao.getCategories()
     return render_template('item_add.html', categories=categories)
+
+
+@app.route("/images/<int:item_id>.jpg")
+def getImage(item_id):
+    """Serves images stored in the database"""
+    item = dao.getItem(item_id)
+    response = make_response(item.image)
+    response.headers['Content-Type'] = 'image/jpeg'
+    response.headers['Content-Disposition'] = 'attachment; filename=img.jpg'
+    return response
 
 
 @app.route('/catalog/json')
 def catalogJSON():
     """Returns catalog in JSON format"""
-    categories = session.query(Category)
-    return jsonify(Catalog=[c.serialize(session) for c in categories])
+    categories = dao.getCategories()
+    return jsonify(Catalog=[c.serialize(
+                    dao.getItemsByCategory(c.id)) for c in categories])
+
+
+@app.route('/catalog/xml')
+def catalogXML():
+    """Returns catalog in XML format"""
+    categories = dao.getCategories()
+    xml = xmlify({'category': [c.serialize(dao.getItemsByCategory(
+                               c.id)) for c in categories]}, wrap="catalog")
+    return Response(xml, mimetype='text/xml')
 
 
 @app.route('/login')
@@ -171,6 +197,7 @@ def login():
     return render_template('login.html', STATE=state)
 
 
+@csrf.exempt
 @app.route('/connect', methods=['POST'])
 def connect():
     """Connects user with a Google/Facebook account"""
@@ -196,9 +223,9 @@ def connect():
     login_session['provider_id'] = data['provider_id']
 
     # see if user exists, if it doesn't make a new one
-    user_id = getUserID(login_session['email'])
+    user_id = dao.getUserID(login_session['email'])
     if not user_id:
-        user_id = createUser(login_session)
+        user_id = dao.createUser(login_session)
     login_session['user_id'] = user_id
 
     return createJSONResponse('Sucessfully logged in', 200)
@@ -221,8 +248,7 @@ def gconnect(auth_code):
     url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'
            % access_token)
 
-    h = httplib2.Http()
-    result = json.loads(h.request(url, 'GET')[1].decode('utf-8'))
+    result = json.loads(sendGETRequest(url)[1].decode('utf-8'))
     # If there was an error in the access token info, abort.
     if result.get('error') is not None:
         return createJSONResponse(result.get('error'), 500)
@@ -269,23 +295,20 @@ def fbconnect(access_token):
            '?grant_type=fb_exchange_token'
            '&client_id=%s&client_secret=%s&fb_exchange_token=%s') % (
         app_id, app_secret, access_token)
-    h = httplib2.Http()
-    result = h.request(url, 'GET')[1]
+    result = sendGETRequest(url)[1]
 
     # Use token to get user info from API
     # strip expire tag from access token
     token = result.split("&")[0]
 
     url = 'https://graph.facebook.com/v2.2/me?fields=id,name,email&%s' % token
-    h = httplib2.Http()
-    result = h.request(url, 'GET')[1]
+    result = sendGETRequest(url)[1]
     data = json.loads(result)
 
     # Get user picture
     url = ('https://graph.facebook.com/v2.2/me/picture?%s'
            '&redirect=0&height=200&width=200') % token
-    h = httplib2.Http()
-    result = h.request(url, 'GET')[1]
+    result = sendGETRequest(url)[1]
     data['picture'] = json.loads(result)["data"]["url"]
 
     # The token must be stored in the login_session in order to properly
@@ -311,18 +334,15 @@ def disconnect():
     if login_session['provider'] == 'google':
         url = ('https://accounts.google.com/o/oauth2/revoke?token=%s'
                % access_token)
-        h = httplib2.Http()
-        result = h.request(url, 'GET')[0]
+        result = sendGETRequest(url)[0]
     else:
         provider_id = login_session['provider_id']
         url = ('https://graph.facebook.com/v2.2/%s/permissions?'
                'access_token=%s') % (provider_id, access_token)
-        print url
-        h = httplib2.Http()
-        result = h.request(url, 'DELETE')[0]
+        result = sendDELETERequest(url)[0]
 
-    if result['status'] == '200':
-        # Reset the user's session.
+    # Reset the user's session.
+    if 'user_id' in login_session:
         del login_session['state']
         del login_session['username']
         del login_session['picture']
@@ -332,66 +352,7 @@ def disconnect():
         del login_session['provider_id']
         del login_session['user_id']
 
-        return redirect('/')
-    else:
-        # For whatever reason, the given token was invalid.
-        return createJSONResponse('Failed to revoke token for given user.',
-                                  400)
-
-
-def createJSONResponse(msg, errorCode):
-    """Helper function to create JSON response"""
-    response = make_response(json.dumps(msg), errorCode)
-    response.headers['Content-Type'] = 'application/json'
-    return response
-
-
-def createUser(login_session):
-    """Creates a new user in the database
-
-    Returns:
-        id of the newly created user
-    """
-    newUser = User(name=login_session['username'],
-                   email=login_session['email'],
-                   picture=login_session['picture'])
-    session.add(newUser)
-    session.commit()
-    user = session.query(User).filter_by(email=login_session['email']).one()
-    return user.id
-
-
-def getUserInfo(user_id):
-    """Fetches user from the databse by id
-    Args:
-        user_id: id of the user
-    Returns:
-        User object corresponding the given id
-    """
-    user = session.query(User).filter_by(id=user_id).one()
-    return user
-
-
-def getUserID(email):
-    """Returns user id by the given email"""
-    try:
-        user = session.query(User).filter_by(email=email).one()
-        return user.id
-    except:
-        return None
-
-
-def userAllowed(user_id=None):
-    """Check whether user is allowed in the system
-
-    Args:
-        user_id: id of the user who created the item in the page
-    """
-    if user_id is None:
-        return 'user_id' in login_session
-    else:
-        return ('user_id' in login_session and
-                user_id == login_session['user_id'])
+    return redirect('/')
 
 
 if __name__ == '__main__':
