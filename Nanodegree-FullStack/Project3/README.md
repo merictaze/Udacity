@@ -18,6 +18,16 @@ http://localhost:8080
 python database_populate.py 
 ```
 
+### Requirements
+```
+dict2xml == 1.3
+Flask == 0.10.1
+httplib2 == 0.9.1
+SQLAlchemy == 0.8.4
+google_api_python_client == 1.4.1
+Requests == 2.7.0
+```
+
 ### API Endpoints
 | Method | Endpoint                                         | Description
 |--------|--------------------------------------------------|--------------------------------------------------------
