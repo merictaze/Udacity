@@ -19,10 +19,12 @@
 
 ## Linux Server Setup
 1. Create a new user named grader
+
     ```
     adduser grader
     ```
 1. Give the grader the permission of sudo
+
     ```
     gpasswd -a grader sudo
     Adding user grader to group sudo
@@ -31,6 +33,7 @@
     sudo:x:27:grader
     ```
 1. Disable direct root login via ssh
+
     ```
     vim /etc/ssh/sshd_config
     # PermitRootLogin no
@@ -46,6 +49,7 @@
     sudo service ssh restart
     ```
 1. Update all currently installed packages
+
     ```
     # doesn't actually install new versions of software.
     # downloads the package lists from the repositories and 
@@ -64,6 +68,7 @@
     sudo apt-get dist-upgrade
     ```
 1. Change the SSH port from 22 to 2200
+
     ```
     # update "Port 22"
     sudo vim /etc/ssh/sshd_config
@@ -74,6 +79,7 @@
     ```
 
 1. Configure the Uncomplicated Firewall (UFW) to only allow incoming connections for SSH (port 2200), HTTP (port 80), and NTP (port 123)
+
     ```
      # enable UFW
      sudo ufw enable
@@ -90,12 +96,14 @@
      sudo ufw status
     ```
 1. Configure the local timezone to UTC
+
     ```
     sudo dpkg-reconfigure tzdata
     cat /etc/timezone
     Etc/UTC
     ```
 1. Install and configure Apache to serve a Python mod_wsgi application
+
     ```
     # install apache, and check $server on your browser
     sudo apt-get install apache2
@@ -112,6 +120,7 @@
     sudo mkdir static templates
     sudo vim application.py
     ```
+
     content of ```application.py```
     ```
     from flask import Flask
@@ -132,7 +141,7 @@
     sudo pip install Flask
     sudo python application.py
     deactivate
-
+    
     # Configure and Enable a New Virtual Host
     sudo vim /etc/apache2/sites-available/App.conf
     ```
@@ -183,6 +192,7 @@
     # check  $server on your browser
     ```
 1. Install and configure PostgreSQL:
+
     ```
     sudo apt-get install postgresql
     # if you want to set postgres user password
@@ -191,16 +201,18 @@
     postgres-# \q
     ```
     1. Do not allow remote connections
+
         ```
         # version might be different
         sudo vim /etc/postgresql/9.3/main/pg_hba.conf
         # remove comments from the following lines
         local   all             postgres                                peer
-        local   all             all                                          peer
-        host    all             all             127.0.0.1/32        md5
+        local   all             all                                     peer
+        host    all             all             127.0.0.1/32            md5
         host    all             all             ::1/128                 md5
         ```
     1. Create a new user named catalog that has limited permissions to your catalog application database
+
         ```
         # http://www.postgresql.org/docs/9.2/static/app-createuser.html
         sudo su postgres -c 'createuser -dRS catalog'
@@ -208,6 +220,7 @@
         sudo psql -U postgres -h localhost -d catalog -c 'grant all privileges on database catalog to catalog'
         ```
 1. Install git, clone and setup your Catalog App project (from your GitHub repository from earlier in the Nanodegree program) so that it functions correctly when visiting your server’s IP address in a browser. 
+
     ```
     sudo apt-get install git
     cd
@@ -223,6 +236,7 @@
     # if you have oauth login
     ```
 1. Remember to set this up appropriately so that your .git directory is not publicly accessible via a browser!
+
     ```
     # remove "Options Indexes" or add "Options -Indexes"
     sudo vim /etc/apache2/apache2.conf 
