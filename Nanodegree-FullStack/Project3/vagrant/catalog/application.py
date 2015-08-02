@@ -2,7 +2,9 @@ from flask import Flask, render_template, url_for
 from flask import request, redirect, flash, jsonify
 from flask import session as login_session
 from flask import make_response, Response
+from flask import g
 
+from werkzeug.local import LocalProxy
 from flask.ext.seasurf import SeaSurf
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
@@ -24,8 +26,22 @@ app.secret_key = 'cvAETf4adFASD4VDS4FB2fas43S5G4gth4T1'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024
 
-dao = CatalogDAO()
 csrf = SeaSurf(app)
+
+# shared DAO variable in the application context
+def getDAO():
+    dao = getattr(g, '_dao', None)
+    if dao is None:
+        dao = g._dao = CatalogDAO()
+    return dao
+
+@app.teardown_appcontext
+def teardown_dao(exception):
+    dao = getattr(g, '_dao', None)
+    if dao is not None:
+        dao.close()
+
+dao = LocalProxy(getDAO)
 
 
 @app.route('/')

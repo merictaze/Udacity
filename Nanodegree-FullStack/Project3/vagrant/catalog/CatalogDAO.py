@@ -12,6 +12,10 @@ class CatalogDAO:
         DBSession = sessionmaker(bind=engine)
         self.session = DBSession()
 
+    def close(self):
+        if self.session is not None:
+            self.session.close()
+
     def createCategory(self, name):
         """Inserts a new category into the database"""
         category = Category(name=name)
